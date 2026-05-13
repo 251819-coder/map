@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Kakao Map Search Service</title>
+  <style>
+    /* 화면 전체를 좌우 2분할 */
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+
+    /* 왼쪽 영역: 검색창 + 결과 리스트 */
+    #left-panel {
+      width: 30%;
+      padding: 20px;
+      box-sizing: border-box;
+      border-right: 1px solid #ccc;
+      overflow-y: auto;
+    }
+
+    #search-box {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #results {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #results li {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    #results li:hover {
+      background-color: #f0f0f0;
+    }
+
+    /* 오른쪽 영역: 지도 */
+    #map {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- 왼쪽 패널 -->
+  <div id="left-panel">
+    <input type="text" id="search-box" placeholder="장소를 입력하세요">
+    <ul id="results"></ul>
+  </div>
+
+  <!-- 오른쪽 지도 -->
+  <div id="map"></div>
+
+  <!-- 카카오맵 SDK 불러오기 -->
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=5bf7c0ceaa203771db8251bd28f75cac&libraries=services"></script>
+  <script>
+    // 지도 초기화
+    var mapContainer = document.getElementById('map'); // 지도 표시 영역
+    var mapOption = {
+      center: new kakao.maps.LatLng(37.66, 126.83), // 초기 위치 (현재 위치)
+      level: 5 // 확대 레벨
+    };
+    var map = new kakao.maps.Map(mapContainer, mapOption);
+
+    // 현재 위치 마커 표시
+    var currentMarker = new kakao.maps.Marker({
+      position: new kakao.maps.LatLng(37.66, 126.83),
+      map: map
+    });
+
+    // 장소 검색 객체 생성
+    var ps = new kakao.maps.services.Places();
+
+    // 검색창 이벤트
+    document.getElementById('search-box').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        searchPlaces();
+      }
+    });
+
+    // 장소 검색 함수
+    function searchPlaces() {
+      var keyword = document.getElementById('search-box').value;
+      if (!keyword.trim()) {
+        alert('검색어를 입력하세요!');
+        return;
+      }
+      ps.keywordSearch(keyword, placesSearchCB);
+    }
+
+    // 검색 결과 콜백 함수
+    function placesSearchCB(data, status, pagination) {
+      if (status === kakao.maps.services.Status.OK) {
+        displayPlaces(data);
+      } else {
+        alert('검색 결과가 없습니다.');
+      }
+    }
+
+    // 검색 결과 표시
+    function displayPlaces(places) {
+      var resultsList = document.getElementById('results');
+      resultsList.innerHTML = '';
+
+      places.forEach(function(place) {
+        var li = document.createElement('li');
+        li.textContent = place.place_name;
+        li.onclick = function() {
+          moveToPlace(place);
+        };
+        resultsList.appendChild(li);
+      });
+    }
+
+    // 선택한 장소로 지도 이동
+    function moveToPlace(place) {
+      var coords = new kakao.maps.LatLng(place.y, place.x);
+      map.setCenter(coords);
+
+      var marker = new kakao.maps.Marker({
+        position: coords,
+        map: map
+      });
+
+      var infowindow = new kakao.maps.InfoWindow({
+        content: '<div style="padding:5px;font-size:12px;">' + place.place_name + '</div>'
+      });
+      infowindow.open(map, marker);
+    }
+  </script>
+</body>
+</html>
