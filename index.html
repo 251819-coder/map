@@ -9,34 +9,74 @@
       padding: 0;
       display: flex;
       height: 100vh;
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
     }
     #left-panel {
       width: 30%;
       padding: 20px;
       box-sizing: border-box;
-      border-right: 1px solid #ccc;
-      overflow-y: auto;
+      border-right: 1px solid #ddd;
+      background-color: #fff;
+      display: flex;
+      flex-direction: column;
     }
     #search-box {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: 12px;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    #suggestions {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      max-height: 120px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      display: none;
+    }
+    #suggestions div {
+      padding: 8px;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background-color: #f0f0f0;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      background-color: #eee;
+      margin-right: 5px;
+      font-size: 14px;
+    }
+    .tab.active {
+      background-color: #4CAF50;
+      color: #fff;
     }
     #results {
       list-style: none;
       padding: 0;
       margin: 0;
+      flex: 1;
+      overflow-y: auto;
     }
     #results li {
-      padding: 8px;
+      padding: 10px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
     }
     #results li:hover {
-      background-color: #f0f0f0;
+      background-color: #f9f9f9;
     }
     #map {
       flex: 1;
@@ -46,6 +86,13 @@
 <body>
   <div id="left-panel">
     <input type="text" id="search-box" placeholder="장소를 입력하세요">
+    <div id="suggestions"></div>
+    <div class="tabs">
+      <div class="tab active" data-type="recommend">추천</div>
+      <div class="tab" data-type="cafe">카페</div>
+      <div class="tab" data-type="restaurant">식당</div>
+      <div class="tab" data-type="hotplace">핫플</div>
+    </div>
     <ul id="results"></ul>
   </div>
   <div id="map"></div>
@@ -60,17 +107,14 @@
     };
     var map = new kakao.maps.Map(mapContainer, mapOption);
 
-    // 현재 위치 가져오기 (브라우저 권한 요청)
+    // 현재 위치 권한 요청
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(position) {
-        var lat = position.coords.latitude;   // 위도
-        var lon = position.coords.longitude;  // 경도
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
         var locPosition = new kakao.maps.LatLng(lat, lon);
-
-        // 지도 중심을 내 위치로 이동
         map.setCenter(locPosition);
 
-        // 내 위치 마커 표시
         var currentMarker = new kakao.maps.Marker({
           position: locPosition,
           map: map
@@ -80,43 +124,78 @@
           content: '<div style="padding:5px;font-size:12px;">내 위치</div>'
         });
         infowindow.open(map, currentMarker);
-      }, function(error) {
-        alert('위치 정보를 가져올 수 없습니다. 기본 좌표로 표시합니다.');
       });
-    } else {
-      alert('이 브라우저에서는 위치 정보를 지원하지 않습니다.');
     }
 
-    // 장소 검색 객체
     var ps = new kakao.maps.services.Places();
 
-    document.getElementById('search-box').addEventListener('keydown', function(e) {
+    // 검색창 입력 이벤트 (자동완성)
+    var searchBox = document.getElementById('search-box');
+    var suggestions = document.getElementById('suggestions');
+    searchBox.addEventListener('input', function() {
+      var keyword = searchBox.value.trim();
+      if (keyword.length > 0) {
+        ps.keywordSearch(keyword, function(data, status) {
+          if (status === kakao.maps.services.Status.OK) {
+            suggestions.innerHTML = '';
+            data.slice(0,5).forEach(function(place) {
+              var div = document.createElement('div');
+              div.textContent = place.place_name;
+              div.onclick = function() {
+                searchBox.value = place.place_name;
+                suggestions.style.display = 'none';
+                searchPlaces();
+              };
+              suggestions.appendChild(div);
+            });
+            suggestions.style.display = 'block';
+          }
+        });
+      } else {
+        suggestions.style.display = 'none';
+      }
+    });
+
+    searchBox.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
+        suggestions.style.display = 'none';
         searchPlaces();
       }
     });
 
+    // 탭 클릭 이벤트
+    var tabs = document.querySelectorAll('.tab');
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        var type = tab.getAttribute('data-type');
+        if (type === 'cafe') searchCategory('카페');
+        else if (type === 'restaurant') searchCategory('식당');
+        else if (type === 'hotplace') searchCategory('핫플');
+        else if (type === 'recommend') searchCategory('추천');
+      });
+    });
+
     function searchPlaces() {
-      var keyword = document.getElementById('search-box').value;
-      if (!keyword.trim()) {
-        alert('검색어를 입력하세요!');
-        return;
-      }
+      var keyword = searchBox.value;
+      if (!keyword.trim()) return;
+      ps.keywordSearch(keyword, placesSearchCB);
+    }
+
+    function searchCategory(keyword) {
       ps.keywordSearch(keyword, placesSearchCB);
     }
 
     function placesSearchCB(data, status, pagination) {
       if (status === kakao.maps.services.Status.OK) {
         displayPlaces(data);
-      } else {
-        alert('검색 결과가 없습니다.');
       }
     }
 
     function displayPlaces(places) {
       var resultsList = document.getElementById('results');
       resultsList.innerHTML = '';
-
       places.forEach(function(place) {
         var li = document.createElement('li');
         li.textContent = place.place_name;
@@ -130,12 +209,10 @@
     function moveToPlace(place) {
       var coords = new kakao.maps.LatLng(place.y, place.x);
       map.setCenter(coords);
-
       var marker = new kakao.maps.Marker({
         position: coords,
         map: map
       });
-
       var infowindow = new kakao.maps.InfoWindow({
         content: '<div style="padding:5px;font-size:12px;">' + place.place_name + '</div>'
       });
