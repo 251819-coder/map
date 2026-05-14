@@ -327,14 +327,68 @@
 
     // ── STATE ──
     var currentPosition = null;
-    var markers = [];           // search result markers
+    var selectedMarker = null;    // 선택된 장소 마커 (1개)
+    var selectedInfoWindow = null;
+    var nearbyMarkers = [];       // 목록 장소 마커들 (작은 동그라미)
     var myLocationMarker = null;
-    var selectedPlaceId = null; // track single vs double click
+    var selectedPlaceId = null;
     var clickTimer = null;
-    var favorites = new Map();  // id → place object
-    var currentPlaces = [];     // currently listed places
+    var favorites = new Map();
+    var currentPlaces = [];
     var activeType = 'recommend';
-    var selectedPlace = null;   // last single-clicked place
+    var selectedPlace = null;
+
+    // ── MARKER IMAGES ──
+    // 선택 마커: 파란 핀 (SVG → data URL)
+    var selectedMarkerSVG = [
+      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">',
+      '  <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>',
+      '  <g filter="url(#s)">',
+      '    <path d="M16 2C9.37 2 4 7.37 4 14c0 9 12 26 12 26S28 23 28 14C28 7.37 22.63 2 16 2z" fill="#3B82F6"/>',
+      '    <circle cx="16" cy="14" r="6" fill="#fff"/>',
+      '    <circle cx="16" cy="14" r="3.5" fill="#3B82F6"/>',
+      '  </g>',
+      '</svg>'
+    ].join('');
+    var selectedMarkerURL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(selectedMarkerSVG);
+    var selectedMarkerImage = new kakao.maps.MarkerImage(
+      selectedMarkerURL,
+      new kakao.maps.Size(32, 42),
+      { offset: new kakao.maps.Point(16, 42) }
+    );
+
+    // 추천 마커: 작은 파란 동그라미
+    function makeNearbyMarkerImage(color) {
+      color = color || '#60A5FA';
+      var svg = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">',
+        '  <circle cx="8" cy="8" r="7" fill="' + color + '" stroke="#fff" stroke-width="2"/>',
+        '</svg>'
+      ].join('');
+      var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      return new kakao.maps.MarkerImage(
+        url,
+        new kakao.maps.Size(16, 16),
+        { offset: new kakao.maps.Point(8, 8) }
+      );
+    }
+    var nearbyMarkerImage = makeNearbyMarkerImage('#60A5FA');
+
+    // ── CLEAR HELPERS ──
+    function clearSelectedMarker() {
+      if (selectedMarker) { selectedMarker.setMap(null); selectedMarker = null; }
+      if (selectedInfoWindow) { selectedInfoWindow.close(); selectedInfoWindow = null; }
+    }
+
+    function clearNearbyMarkers() {
+      nearbyMarkers.forEach(function(m) { m.setMap(null); });
+      nearbyMarkers = [];
+    }
+
+    function clearAllMarkers() {
+      clearSelectedMarker();
+      clearNearbyMarkers();
+    }
 
     // ── MY LOCATION ──
     if (navigator.geolocation) {
@@ -343,12 +397,21 @@
         currentPosition = new kakao.maps.LatLng(lat, lon);
         map.setCenter(currentPosition);
 
+        var myMarkerSVG = [
+          '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">',
+          '  <circle cx="11" cy="11" r="10" fill="#3B82F6" opacity="0.2"/>',
+          '  <circle cx="11" cy="11" r="6" fill="#3B82F6" stroke="#fff" stroke-width="2.5"/>',
+          '</svg>'
+        ].join('');
+        var myMarkerURL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(myMarkerSVG);
+
         myLocationMarker = new kakao.maps.Marker({
           position: currentPosition,
           map: map,
           image: new kakao.maps.MarkerImage(
-            'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
-            new kakao.maps.Size(24, 35)
+            myMarkerURL,
+            new kakao.maps.Size(22, 22),
+            { offset: new kakao.maps.Point(11, 11) }
           )
         });
         var iw = new kakao.maps.InfoWindow({
@@ -364,25 +427,19 @@
       loadTab('recommend');
     }
 
-    // ── MARKERS ──
-    function clearMarkers() {
-      markers.forEach(function(m) { m.setMap(null); });
-      markers = [];
-    }
-
-    function addMarker(place, index) {
+    // ── ADD NEARBY MARKER ──
+    function addNearbyMarker(place) {
       var coords = new kakao.maps.LatLng(place.y, place.x);
-      var marker = new kakao.maps.Marker({ position: coords, map: map });
-      markers.push(marker);
-
-      var iw = new kakao.maps.InfoWindow({
-        content: '<div style="padding:4px 8px;font-size:12px;white-space:nowrap;">' + place.place_name + '</div>'
+      var marker = new kakao.maps.Marker({
+        position: coords,
+        map: map,
+        image: nearbyMarkerImage
       });
+      nearbyMarkers.push(marker);
 
       kakao.maps.event.addListener(marker, 'click', function() {
         handlePlaceSelect(place);
       });
-
       return marker;
     }
 
@@ -442,6 +499,8 @@
 
     function loadTab(type) {
       closeDetail();
+      clearAllMarkers();
+      selectedPlace = null;
       if (type === 'favorites') { displayFavorites(); return; }
       if (type === 'recommend') {
         // If a place is selected, show nearby recs around it; else use current pos
@@ -468,7 +527,8 @@
 
     function displayPlaces(places) {
       currentPlaces = places;
-      clearMarkers();
+      // 목록 마커만 교체 — 선택 마커(selectedMarker)는 건드리지 않음
+      clearNearbyMarkers();
       var list = document.getElementById('results');
       list.innerHTML = '';
 
@@ -485,7 +545,7 @@
       }
 
       places.forEach(function(place, i) {
-        addMarker(place, i);
+        addNearbyMarker(place);
 
         var li = document.createElement('li');
         li.dataset.id = place.id;
@@ -558,20 +618,24 @@
 
     // ── MOVE MAP ──
     function moveToPlace(place) {
-      clearMarkers();
+      // 선택 마커만 교체 (목록 마커는 유지)
+      clearSelectedMarker();
       var coords = new kakao.maps.LatLng(place.y, place.x);
       map.setCenter(coords);
       map.setLevel(3);
 
-      var marker = new kakao.maps.Marker({ position: coords, map: map });
-      markers.push(marker);
-
-      var iw = new kakao.maps.InfoWindow({
-        content: '<div style="padding:5px 10px;font-size:13px;font-weight:600;">' + place.place_name + '</div>'
+      selectedMarker = new kakao.maps.Marker({
+        position: coords,
+        map: map,
+        image: selectedMarkerImage,
+        zIndex: 10
       });
-      iw.open(map, marker);
+      selectedInfoWindow = new kakao.maps.InfoWindow({
+        content: '<div style="padding:5px 10px;font-size:13px;font-weight:600;white-space:nowrap;">' + place.place_name + '</div>'
+      });
+      selectedInfoWindow.open(map, selectedMarker);
 
-      // If recommend tab is active, refresh nearby list around selected place
+      // 추천 탭이면 선택 장소 근처로 목록 갱신
       if (activeType === 'recommend') {
         searchNearby('FD6', coords);
       }
@@ -660,7 +724,7 @@
     }
 
     function displayFavorites() {
-      clearMarkers();
+      clearAllMarkers();
       closeDetail();
       var list = document.getElementById('results');
       list.innerHTML = '';
