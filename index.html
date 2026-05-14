@@ -14,8 +14,9 @@
     .tab { flex:1; text-align:center; padding:10px; cursor:pointer; border-radius:6px; background:#eee; margin-right:5px; font-size:14px; }
     .tab.active { background:#4CAF50; color:#fff; }
     #results { list-style:none; padding:0; margin:0; flex:1; overflow-y:auto; }
-    #results li { padding:10px; border-bottom:1px solid #eee; cursor:pointer; }
+    #results li { padding:10px; border-bottom:1px solid #eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
     #results li:hover { background:#f9f9f9; }
+    .fav-btn { background:none; border:none; cursor:pointer; font-size:16px; }
     #map { flex:1; }
   </style>
 </head>
@@ -28,6 +29,7 @@
       <div class="tab" data-type="cafe">카페</div>
       <div class="tab" data-type="restaurant">식당</div>
       <div class="tab" data-type="hotplace">핫플</div>
+      <div class="tab" data-type="favorites">즐겨찾기</div>
     </div>
     <ul id="results"></ul>
   </div>
@@ -40,6 +42,8 @@
     var map = new kakao.maps.Map(mapContainer,mapOption);
     var ps = new kakao.maps.services.Places();
     var currentPosition;
+    var markers = [];
+    var favorites = [];
 
     // 현재 위치 가져오기
     if(navigator.geolocation){
@@ -52,7 +56,7 @@
         infowindow.open(map,marker);
 
         // 기본 추천 탭 실행
-        searchCategoryNearby('FD6'); // 음식점 카테고리 코드
+        searchCategoryNearby('FD6'); // 음식점
       });
     }
 
@@ -89,10 +93,11 @@
         tabs.forEach(t=>t.classList.remove('active'));
         tab.classList.add('active');
         var type=tab.getAttribute('data-type');
-        if(type==='cafe') searchCategoryNearby('CE7'); // 카페
-        else if(type==='restaurant') searchCategoryNearby('FD6'); // 음식점
-        else if(type==='hotplace') searchCategoryNearby('AT4'); // 관광명소
-        else if(type==='recommend') searchCategoryNearby('FD6'); // 추천: 음식점 중심
+        if(type==='cafe') searchCategoryNearby('CE7');
+        else if(type==='restaurant') searchCategoryNearby('FD6');
+        else if(type==='hotplace') searchCategoryNearby('AT4');
+        else if(type==='recommend') searchCategoryNearby('FD6');
+        else if(type==='favorites') displayFavorites();
       });
     });
 
@@ -115,22 +120,64 @@
         displayPlaces(data);
       }
     }
+
     function displayPlaces(places){
       var resultsList=document.getElementById('results');
       resultsList.innerHTML='';
       places.forEach(function(place){
+        var li=document.createElement('li');
+        li.textContent=place.place_name + " (" + calcDistance(place) + "km)";
+        var favBtn=document.createElement('button');
+        favBtn.textContent='⭐';
+        favBtn.className='fav-btn';
+        favBtn.onclick=function(e){
+          e.stopPropagation();
+          addFavorite(place);
+        };
+        li.appendChild(favBtn);
+        li.onclick=function(){ moveToPlace(place); };
+        resultsList.appendChild(li);
+      });
+    }
+
+    // 마커 관리
+    function clearMarkers(){ markers.forEach(m=>m.setMap(null)); markers=[]; }
+
+    function moveToPlace(place){
+      clearMarkers();
+      var coords=new kakao.maps.LatLng(place.y,place.x);
+      map.setCenter(coords);
+      var marker=new kakao.maps.Marker({ position: coords, map: map });
+      markers.push(marker);
+      var infowindow=new kakao.maps.InfoWindow({ content:'<div style="padding:5px;font-size:12px;">'+place.place_name+'</div>' });
+      infowindow.open(map,marker);
+    }
+
+    // 즐겨찾기
+    function addFavorite(place){
+      if(!favorites.find(f=>f.id===place.id)){
+        favorites.push(place);
+        alert(place.place_name+" 즐겨찾기에 추가됨!");
+      }
+    }
+    function displayFavorites(){
+      var resultsList=document.getElementById('results');
+      resultsList.innerHTML='<h3>즐겨찾기</h3>';
+      favorites.forEach(function(place){
         var li=document.createElement('li');
         li.textContent=place.place_name;
         li.onclick=function(){ moveToPlace(place); };
         resultsList.appendChild(li);
       });
     }
-    function moveToPlace(place){
-      var coords=new kakao.maps.LatLng(place.y,place.x);
-      map.setCenter(coords);
-      var marker=new kakao.maps.Marker({ position: coords, map: map });
-      var infowindow=new kakao.maps.InfoWindow({ content:'<div style="padding:5px;font-size:12px;">'+place.place_name+'</div>' });
-      infowindow.open(map,marker);
+
+    // 거리 계산 (현재 위치 ~ 장소)
+    function calcDistance(place){
+      if(!currentPosition) return "?";
+      var dx=currentPosition.getLng()-place.x;
+      var dy=currentPosition.getLat()-place.y;
+      var dist=Math.sqrt(dx*dx+dy*dy)*111; // 대략 km 환산
+      return dist.toFixed(2);
     }
   </script>
 </body>
