@@ -4,23 +4,32 @@
   <meta charset="UTF-8">
   <title>🎭 공연 지도</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f0c1a;
-      --panel-bg: #1a1528;
-      --panel-bg2: #211c33;
-      --accent: #c084fc;
-      --accent2: #a855f7;
-      --accent-glow: rgba(192,132,252,0.18);
-      --gold: #fbbf24;
-      --text: #f3f0ff;
-      --text-muted: #9ca3b0;
-      --border: rgba(192,132,252,0.15);
-      --hover: rgba(192,132,252,0.08);
-      --radius: 14px;
-      --shadow: 0 4px 32px rgba(0,0,0,0.5);
+      /* ── 팔레트 ── */
+      --butter:    #FFF1B5;      /* Buttermilk — 배경, 카드 */
+      --butter2:   #FDE98A;      /* 강조 버터 */
+      --blue:      #C1DBE8;      /* Pastel Blue — 패널, 탭 */
+      --blue2:     #9DC4D8;      /* 강조 블루 */
+      --burg:      #43302E;      /* Old Burgundy — 텍스트, 액센트 */
+      --burg-soft: rgba(67,48,46,0.08);
+      --burg-mid:  rgba(67,48,46,0.18);
+
+      --bg:        #EEF6FA;      /* 전체 배경 */
+      --panel-bg:  #F7FBFD;      /* 패널 흰빛 */
+      --panel-bg2: #E8F3F9;      /* 카드 내부 */
+      --text:      #2C1E1C;      /* 본문 텍스트 */
+      --text-sub:  #43302E;
+      --text-muted:#7A6260;
+      --border:    rgba(67,48,46,0.12);
+      --hover:     rgba(193,219,232,0.45);
+      --accent:    #43302E;
+      --accent-lt: #C1DBE8;
+      --gold:      #B07D2A;
+      --radius:    14px;
+      --shadow:    0 2px 20px rgba(67,48,46,0.08);
     }
 
     body {
@@ -47,21 +56,24 @@
 
     /* Header */
     #header {
-      padding: 18px 18px 14px;
-      background: linear-gradient(135deg, #1a1528 0%, #2d1f4e 100%);
+      padding: 20px 18px 14px;
+      background: linear-gradient(160deg, var(--butter) 0%, var(--blue) 100%);
       border-bottom: 1px solid var(--border);
     }
     #header-title {
-      font-size: 18px;
+      font-family: 'Noto Serif KR', serif;
+      font-size: 19px;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--burg);
       letter-spacing: -0.3px;
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 13px;
     }
-    #header-title span { font-size: 22px; }
+    #header-title .logo-star {
+      width: 28px; height: 28px;
+    }
 
     #search-wrap { position: relative; }
     #search-box {
@@ -70,19 +82,23 @@
       border: 1.5px solid var(--border);
       border-radius: 10px;
       font-size: 13px;
-      font-family: inherit;
+      font-family: 'Noto Sans KR', sans-serif;
       color: var(--text);
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.7);
       outline: none;
       transition: border-color .2s, box-shadow .2s;
     }
     #search-box::placeholder { color: var(--text-muted); }
-    #search-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); background: rgba(255,255,255,0.08); }
+    #search-box:focus {
+      border-color: var(--blue2);
+      box-shadow: 0 0 0 3px rgba(193,219,232,0.5);
+      background: #fff;
+    }
     #search-btn {
       position: absolute; right: 10px; top: 50%;
       transform: translateY(-50%);
       background: none; border: none; cursor: pointer;
-      color: var(--accent); display: flex; align-items: center;
+      color: var(--burg); display: flex; align-items: center;
     }
     #search-btn svg { width: 17px; height: 17px; }
 
@@ -91,11 +107,11 @@
       top: calc(100% + 4px); left: 0; right: 0;
       border: 1px solid var(--border);
       border-radius: 10px;
-      background: var(--panel-bg2);
-      max-height: 160px;
+      background: #fff;
+      max-height: 180px;
       overflow-y: auto;
       z-index: 100;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 24px rgba(67,48,46,0.12);
       display: none;
     }
     #suggestions div {
@@ -107,43 +123,48 @@
       border-bottom: 1px solid var(--border);
     }
     #suggestions div:last-child { border-bottom: none; }
-    #suggestions div:hover { background: var(--hover); color: var(--accent); }
+    #suggestions div:hover { background: var(--hover); }
 
     /* Tabs */
     .tabs {
       display: flex;
-      padding: 12px 14px;
-      gap: 8px;
+      padding: 10px 12px;
+      gap: 7px;
       border-bottom: 1px solid var(--border);
-      background: var(--panel-bg);
+      background: var(--blue);
     }
     .tab {
       flex: 1;
       text-align: center;
-      padding: 8px 4px;
-      border-radius: 10px;
-      font-size: 13px;
+      padding: 7px 4px;
+      border-radius: 9px;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
-      border: 1.5px solid var(--border);
-      color: var(--text-muted);
-      background: transparent;
+      border: 1.5px solid transparent;
+      color: var(--burg);
+      background: rgba(255,255,255,0.45);
       transition: all .2s;
       white-space: nowrap;
     }
-    .tab:hover { border-color: var(--accent); color: var(--accent); }
-    .tab.active { background: var(--accent2); border-color: var(--accent2); color: #fff; box-shadow: 0 0 16px var(--accent-glow); }
+    .tab:hover { background: rgba(255,255,255,0.7); border-color: var(--border); }
+    .tab.active {
+      background: var(--burg);
+      color: var(--butter);
+      border-color: var(--burg);
+      box-shadow: 0 2px 8px rgba(67,48,46,0.2);
+    }
 
     /* Results */
     #results-area {
       flex: 1;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
+      scrollbar-color: var(--blue2) transparent;
     }
     #results { list-style: none; }
     #results li {
-      padding: 14px 16px;
+      padding: 13px 16px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       display: flex;
@@ -152,30 +173,38 @@
       transition: background .15s;
     }
     #results li:hover { background: var(--hover); }
-    #results li.selected { background: var(--hover); border-left: 3px solid var(--accent); }
+    #results li.selected {
+      background: rgba(193,219,232,0.3);
+      border-left: 3px solid var(--burg);
+    }
 
     .place-icon {
       width: 38px; height: 38px;
       border-radius: 10px;
-      background: rgba(192,132,252,0.12);
+      background: var(--butter);
       border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center;
       font-size: 18px;
       flex-shrink: 0;
+      overflow: hidden;
     }
+    .place-icon img { width: 26px; height: 26px; object-fit: contain; }
     .place-info { flex: 1; min-width: 0; }
     .place-name {
-      font-size: 14px; font-weight: 600;
+      font-size: 13.5px; font-weight: 600;
       color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .place-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-    .place-hint { font-size: 11px; color: var(--accent); margin-top: 2px; }
+    .place-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .place-hint {
+      font-size: 10.5px; color: var(--blue2);
+      margin-top: 2px; font-weight: 500;
+    }
 
     .fav-btn {
       background: none; border: none;
       cursor: pointer; font-size: 16px;
-      flex-shrink: 0; opacity: .4;
+      flex-shrink: 0; opacity: .5;
       transition: opacity .2s, transform .2s;
       padding: 4px;
     }
@@ -187,6 +216,7 @@
       text-align: center;
       color: var(--text-muted);
       font-size: 13px;
+      line-height: 1.8;
     }
     .empty-state .emoji { font-size: 36px; margin-bottom: 10px; }
 
@@ -195,131 +225,120 @@
       position: absolute;
       bottom: 0; left: 0; right: 0;
       background: var(--panel-bg);
-      border-top: 2px solid var(--accent2);
+      border-top: 3px solid var(--burg);
       border-radius: var(--radius) var(--radius) 0 0;
       transform: translateY(100%);
-      transition: transform .38s cubic-bezier(.4,0,.2,1);
+      transition: transform .36s cubic-bezier(.4,0,.2,1);
       z-index: 30;
       max-height: 82%;
       overflow-y: auto;
-      box-shadow: 0 -12px 48px rgba(168,85,247,0.18);
+      box-shadow: 0 -8px 32px rgba(67,48,46,0.13);
     }
     #detail-panel.open { transform: translateY(0); }
 
     #detail-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 16px 12px;
+      padding: 15px 16px 11px;
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0;
-      background: var(--panel-bg);
+      background: linear-gradient(135deg, var(--butter) 0%, #fff 100%);
       z-index: 1;
     }
-    #detail-header-left { display: flex; flex-direction: column; gap: 4px; }
-    #detail-title { font-size: 16px; font-weight: 700; color: var(--accent); }
+    #detail-header-left { display: flex; flex-direction: column; gap: 3px; }
+    #detail-title {
+      font-family: 'Noto Serif KR', serif;
+      font-size: 15px; font-weight: 700;
+      color: var(--burg);
+    }
     #detail-subtitle { font-size: 11px; color: var(--text-muted); }
     #detail-close {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-muted); font-size: 22px; line-height: 1;
-      padding: 2px 6px; border-radius: 6px;
-      transition: background .15s, color .15s;
+      background: var(--burg-soft); border: none; cursor: pointer;
+      color: var(--burg); font-size: 18px; line-height: 1;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
     }
-    #detail-close:hover { background: var(--hover); color: var(--text); }
+    #detail-close:hover { background: var(--burg-mid); }
 
     #detail-body { padding: 14px 16px 20px; }
 
-    /* Theater info rows */
     .detail-row {
       display: flex; align-items: flex-start;
-      gap: 10px; margin-bottom: 11px; font-size: 13px;
+      gap: 10px; margin-bottom: 10px; font-size: 13px;
     }
-    .detail-row-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+    .detail-row-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
     .detail-row-text { color: var(--text-muted); line-height: 1.5; }
-    .detail-row-text a { color: var(--accent); text-decoration: none; }
+    .detail-row-text a { color: var(--burg); text-decoration: none; font-weight: 500; }
     .detail-row-text a:hover { text-decoration: underline; }
 
     /* Performance section */
-    #perf-section { margin-top: 18px; }
-    #perf-section-title {
-      font-size: 13px; font-weight: 700; color: var(--text-muted);
-      margin-bottom: 12px;
+    #perf-section { margin-top: 16px; }
+    .section-title {
+      font-size: 12px; font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
       display: flex; align-items: center; gap: 6px;
     }
-    #perf-loading {
-      text-align: center; padding: 24px 0;
-      color: var(--text-muted); font-size: 13px;
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
-    .spin {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Performance cards */
     .perf-card {
-      background: var(--panel-bg2);
-      border: 1px solid var(--border);
+      background: var(--butter);
+      border: 1px solid rgba(67,48,46,0.1);
       border-radius: 12px;
       padding: 14px;
       margin-bottom: 10px;
-      transition: border-color .2s;
+      transition: box-shadow .2s, border-color .2s;
     }
-    .perf-card:hover { border-color: var(--accent); }
-
+    .perf-card:hover {
+      box-shadow: 0 4px 16px rgba(67,48,46,0.1);
+      border-color: var(--burg);
+    }
     .perf-title {
-      font-size: 15px; font-weight: 700; color: var(--text);
-      margin-bottom: 8px; line-height: 1.3;
+      font-family: 'Noto Serif KR', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--burg);
+      margin-bottom: 8px; line-height: 1.4;
     }
     .perf-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
     .perf-tag {
       padding: 2px 9px; border-radius: 20px;
       font-size: 11px; font-weight: 500;
-      background: rgba(192,132,252,0.12);
-      color: var(--accent);
-      border: 1px solid rgba(192,132,252,0.25);
+      background: var(--blue);
+      color: var(--burg);
+      border: 1px solid rgba(67,48,46,0.12);
     }
-    .perf-tag.genre { background: rgba(251,191,36,0.1); color: var(--gold); border-color: rgba(251,191,36,0.25); }
+    .perf-tag.genre {
+      background: var(--burg);
+      color: var(--butter);
+      border-color: var(--burg);
+    }
+    .perf-desc {
+      font-size: 12px; color: var(--text-muted);
+      margin-bottom: 10px; line-height: 1.6;
+    }
     .perf-meta-grid {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 6px;
     }
     .perf-meta-item {
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--border);
       border-radius: 8px; padding: 8px 10px;
     }
     .perf-meta-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
     .perf-meta-value { font-size: 12px; font-weight: 600; color: var(--text); }
     .perf-meta-value.price { color: var(--gold); }
 
-    /* Nearby food tab detail */
     #food-section { margin-top: 4px; }
-    .food-card {
-      background: var(--panel-bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      display: flex; align-items: center; gap: 12px;
-      transition: border-color .2s;
-    }
-    .food-card:hover { border-color: var(--accent); }
-    .food-card-icon {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      background: rgba(192,132,252,0.1);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 17px; flex-shrink: 0;
-    }
-    .food-card-info { flex: 1; min-width: 0; }
-    .food-card-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .food-card-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .food-card-dist { font-size: 11px; color: var(--accent); flex-shrink: 0; }
 
     #map { flex: 1; }
   </style>
@@ -329,7 +348,10 @@
 
   <!-- Header -->
   <div id="header">
-    <div id="header-title"><span>🎭</span> 공연 지도</div>
+    <div id="header-title">
+      <img class="logo-star" src="/mnt/user-data/uploads/ʕっ_____ʔㅤㅤ_ㅤ_𓈒_ㅤ𝖼_𝗈_𝗍𝗍_𝗈_𝗇_ㅤ_𝗉_𝗈_𝗌_𝗍ㅤ_𓈒ㅤ__.webp" alt="">
+      공연 지도
+    </div>
     <div id="search-wrap">
       <input type="text" id="search-box" placeholder="극장 이름으로 검색…">
       <button id="search-btn" title="검색">
@@ -344,8 +366,8 @@
   <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" data-type="theater">🎭 극장</div>
-    <div class="tab" data-type="food">🍽 주변 맛집</div>
-    <div class="tab" data-type="cafe">☕ 주변 카페</div>
+    <div class="tab" data-type="food">🍽 맛집</div>
+    <div class="tab" data-type="cafe">☕ 카페</div>
   </div>
 
   <!-- Results -->
@@ -364,17 +386,12 @@
     </div>
     <div id="detail-body">
       <div id="detail-content"></div>
-
-      <!-- Theater tab: performance info -->
       <div id="perf-section" style="display:none;">
-        <div id="perf-section-title">🎬 현재 공연 중</div>
-        <div id="perf-loading" style="display:none;"><span class="spin"></span> 공연 정보 불러오는 중…</div>
+        <div class="section-title">🎬 현재 공연 중</div>
         <div id="perf-list"></div>
       </div>
-
-      <!-- Food tab: nearby places -->
       <div id="food-section" style="display:none;">
-        <div id="perf-section-title" style="margin-top:0;">📍 극장 주변</div>
+        <div class="section-title">📍 극장 주변</div>
         <div id="food-list"></div>
       </div>
     </div>
@@ -476,8 +493,29 @@ function addNearbyMarker(place, isFood) {
     image: isFood ? foodMarkerImage : nearbyMarkerImage
   });
   nearbyMarkers.push(marker);
-  kakao.maps.event.addListener(marker, 'click', function() { handlePlaceSelect(place); });
+  kakao.maps.event.addListener(marker, 'click', function() {
+    if (isFood) {
+      // 음식/카페 마커: 지도 이동만
+      highlightListItem(place.id);
+      moveTo(place);
+    } else {
+      // 극장 마커: 바로 상세 패널 열기
+      highlightListItem(place.id);
+      moveTo(place);
+      selectedPlace = place;
+      if (activeType === 'theater') showDetail(place);
+    }
+  });
   return marker;
+}
+
+function highlightListItem(placeId) {
+  document.querySelectorAll('#results li').forEach(function(l) { l.classList.remove('selected'); });
+  var target = document.querySelector('#results li[data-id="' + placeId + '"]');
+  if (target) {
+    target.classList.add('selected');
+    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -708,7 +746,7 @@ function displayTheaters(places) {
 
     var hint = document.createElement('div');
     hint.className = 'place-hint';
-    hint.textContent = '한 번 더 클릭 → 공연 정보 보기';
+    hint.textContent = '클릭하면 공연 정보 바로 보기 →';
 
     info.appendChild(name);
     info.appendChild(meta);
@@ -809,29 +847,13 @@ function moveTo(place) {
 }
 
 // ═══════════════════════════════════════════
-//  PLACE SELECT (single = map move, double = detail)
+//  PLACE SELECT
 // ═══════════════════════════════════════════
 function handlePlaceSelect(place, liEl) {
-  if (clickTimer && selectedPlaceId === place.id) {
-    clearTimeout(clickTimer);
-    clickTimer = null;
-    selectedPlaceId = null;
-    moveTo(place);
-    showDetail(place);
-  } else {
-    if (clickTimer) clearTimeout(clickTimer);
-    selectedPlaceId = place.id;
-    selectedPlace = place;
-
-    document.querySelectorAll('#results li').forEach(function(l) { l.classList.remove('selected'); });
-    if (liEl) liEl.classList.add('selected');
-
-    clickTimer = setTimeout(function() {
-      clickTimer = null;
-      selectedPlaceId = null;
-      moveTo(place);
-    }, 300);
-  }
+  selectedPlace = place;
+  highlightListItem(place.id);
+  moveTo(place);
+  if (activeType === 'theater') showDetail(place);
 }
 
 // ═══════════════════════════════════════════
@@ -872,63 +894,116 @@ function showDetail(place) {
 }
 
 // ═══════════════════════════════════════════
-//  FETCH PERFORMANCES via Claude API
+//  PERFORMANCE DATABASE (2025년 상반기 기준)
 // ═══════════════════════════════════════════
+var PERF_DB = {
+  '세종문화회관': [
+    { title: '세종 챔버 시리즈 — 봄의 소나타', genre: '클래식', period: '2025.04.12 ~ 2025.06.28', price: 'R석 5만원 / S석 3만원', keywords: ['실내악','봄 시즌','현악'], description: '세종 체임버 오케스트라가 선보이는 봄 특별 시리즈. 슈베르트·브람스 소나타를 중심으로 구성.' },
+    { title: '뮤지컬 〈마리 퀴리〉', genre: '뮤지컬', period: '2025.05.03 ~ 2025.07.27', price: 'VIP 15만원 / R석 11만원 / S석 7만원', keywords: ['역사','여성서사','과학'], description: '노벨상 2회 수상자 마리 퀴리의 삶을 그린 창작 뮤지컬. 강렬한 넘버와 무대 미술이 압권.' },
+    { title: '서울시극단 정기공연 〈오셀로〉', genre: '연극', period: '2025.06.06 ~ 2025.06.29', price: 'R석 4만원 / S석 2.5만원', keywords: ['셰익스피어','비극','고전'], description: '셰익스피어 4대 비극 중 하나. 질투와 배신의 심리를 현대적 연출로 재해석.' }
+  ],
+  '충무아트센터': [
+    { title: '뮤지컬 〈레베카〉', genre: '뮤지컬', period: '2025.03.28 ~ 2025.06.22', price: 'VIP 18만원 / R석 14만원 / S석 9만원 / A석 5만원', keywords: ['미스터리','로맨스','클래식뮤지컬'], description: '대프니 듀 모리에의 동명 소설 원작. 저택 맨덜리의 비밀을 쫓는 숨막히는 서스펜스.' },
+    { title: '연극 〈4.48 사이코시스〉', genre: '연극', period: '2025.05.15 ~ 2025.06.08', price: 'R석 4만원 / S석 2.5만원', keywords: ['실험극','모노드라마','사라케인'], description: '영국 극작가 사라 케인의 마지막 유작. 정신의 가장 깊은 곳을 탐험하는 실험적 공연.' }
+  ],
+  '예술의전당': [
+    { title: '오페라 〈라 트라비아타〉', genre: '오페라', period: '2025.05.23 ~ 2025.06.01', price: 'R석 20만원 / S석 15만원 / A석 8만원 / B석 4만원', keywords: ['베르디','이탈리아오페라','비운의사랑'], description: '베르디의 걸작 오페라. 화려한 무대와 세계 정상급 성악가들의 협연으로 꾸며진다.' },
+    { title: '발레 〈지젤〉 — 국립발레단', genre: '발레', period: '2025.06.13 ~ 2025.06.22', price: 'R석 12만원 / S석 8만원 / A석 4만원', keywords: ['낭만발레','국립발레단','클래식'], description: '낭만주의 발레의 정수. 국립발레단의 수석 무용수들이 펼치는 환상적인 무대.' },
+    { title: '피아노 리사이틀 — 조성진', genre: '클래식', period: '2025.07.05', price: 'R석 18만원 / S석 12만원 / A석 7만원', keywords: ['피아노','쇼팽콩쿠르','솔로리사이틀'], description: '쇼팽 콩쿠르 우승자 조성진의 단독 리사이틀. 베토벤·쇼팽 프로그램으로 구성.' }
+  ],
+  '국립극장': [
+    { title: '창극 〈트로이의 여인들〉', genre: '창극', period: '2025.05.09 ~ 2025.05.25', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['창극','국악','에우리피데스'], description: '에우리피데스의 고전을 창극으로 재해석. 전통 판소리와 현대 연출의 만남.' },
+    { title: '국립무용단 〈묵향〉', genre: '한국무용', period: '2025.06.20 ~ 2025.06.29', price: 'R석 5만원 / S석 3만원', keywords: ['한국무용','전통','현대적재해석'], description: '묵의 향기처럼 번지는 한국 전통미. 국립무용단의 대표 레퍼토리.' }
+  ],
+  '블루스퀘어': [
+    { title: '뮤지컬 〈헤드윅〉', genre: '뮤지컬', period: '2025.04.04 ~ 2025.07.06', price: 'VIP 15만원 / R석 11만원 / S석 7만원', keywords: ['록뮤지컬','1인극','퀴어'], description: '불완전한 영혼이 찾는 사랑의 기원. 강렬한 록 넘버와 폭발적 에너지의 컬트 뮤지컬.' },
+    { title: '뮤지컬 〈킹키부츠〉', genre: '뮤지컬', period: '2025.07.18 ~ 2025.10.12', price: 'VIP 16만원 / R석 12만원 / S석 8만원 / A석 5만원', keywords: ['팝음악','우정','드래그퀸'], description: '신발 공장과 드래그퀸의 유쾌한 만남. 시네디 로퍼의 음악이 가득한 신나는 뮤지컬.' }
+  ],
+  'LG아트센터': [
+    { title: '마르셀 뒤샹 〈변기에서 예술로〉 렉처퍼포먼스', genre: '복합장르', period: '2025.05.30 ~ 2025.06.01', price: '전석 3만원', keywords: ['현대예술','강연','퍼포먼스'], description: '다다이즘의 아이콘 마르셀 뒤샹을 현대적으로 재조명하는 렉처 퍼포먼스.' },
+    { title: '피나 바우쉬 부퍼탈 탄츠테아터 내한공연', genre: '현대무용', period: '2025.09.05 ~ 2025.09.07', price: 'R석 15만원 / S석 10만원 / A석 6만원', keywords: ['탄츠테아터','독일','세계적무용단'], description: '전설적인 안무가 피나 바우쉬의 유산을 이어받은 부퍼탈 탄츠테아터의 특별 내한.' }
+  ],
+  '명동예술극장': [
+    { title: '연극 〈햄릿〉 — 국립극단', genre: '연극', period: '2025.05.17 ~ 2025.06.15', price: 'R석 4만원 / S석 2.5만원 / A석 1만원', keywords: ['셰익스피어','국립극단','비극'], description: '국립극단이 새롭게 해석한 햄릿. 현대적 무대 언어로 풀어낸 실존의 고뇌.' },
+    { title: '연극 〈엄마를 부탁해〉', genre: '연극', period: '2025.07.04 ~ 2025.08.03', price: 'R석 5만원 / S석 3만원', keywords: ['가족','신경숙원작','감동'], description: '신경숙 원작 소설의 무대화. 어머니의 실종과 가족의 기억을 따라가는 감동 드라마.' }
+  ],
+  '두산아트센터': [
+    { title: '연극 〈부자유친〉', genre: '연극', period: '2025.05.22 ~ 2025.06.14', price: '전석 3만원', keywords: ['가족드라마','창작극','부자관계'], description: '두산아트센터 창작 지원 작품. 아버지와 아들 사이의 복잡한 감정을 섬세하게 그려낸다.' },
+    { title: '미술·퍼포먼스 〈경계의 몸〉', genre: '복합장르', period: '2025.06.27 ~ 2025.07.19', price: '전석 2만원', keywords: ['실험예술','몸','경계'], description: '시각예술과 퍼포먼스가 결합된 실험적 작품. 몸의 경계와 정체성을 탐구한다.' }
+  ],
+  '아르코예술극장': [
+    { title: '연극 〈고도를 기다리며〉 — 30주년 기념', genre: '연극', period: '2025.06.03 ~ 2025.06.22', price: 'R석 3만원 / S석 2만원', keywords: ['부조리극','베케트','고전'], description: '사무엘 베케트의 부조리극 걸작. 초연 30주년 기념 특별 공연으로 원로 배우들이 참여.' }
+  ],
+  'KBS아트홀': [
+    { title: '뮤지컬 갈라 콘서트 〈브로드웨이 나잇〉', genre: '뮤지컬', period: '2025.05.31 ~ 2025.06.01', price: 'R석 8만원 / S석 5만원', keywords: ['갈라콘서트','브로드웨이','넘버모음'], description: '브로드웨이 뮤지컬의 명곡들을 한자리에서. 정상급 뮤지컬 배우들이 총출동하는 특별 갈라.' },
+    { title: 'KBS교향악단 정기연주회 제800회', genre: '클래식', period: '2025.06.27', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['교향악','기념공연','베토벤'], description: 'KBS교향악단 제800회 정기연주회. 베토벤 교향곡 9번 〈합창〉으로 역사적 이정표를 축하.' }
+  ],
+  '국립정동극장': [
+    { title: '전통예술 시리즈 〈정동에 봄이 오면〉', genre: '국악', period: '2025.04.19 ~ 2025.05.31', price: 'R석 4만원 / S석 2.5만원', keywords: ['국악','전통','봄시즌'], description: '정동극장의 봄 시즌 전통예술 시리즈. 판소리·가야금·사물놀이가 어우러진 무대.' },
+    { title: '무용극 〈춘향〉', genre: '무용극', period: '2025.06.14 ~ 2025.08.30', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['춘향전','한국무용','전통'], description: '우리 고전 춘향전을 무용극으로. 아름다운 한국 전통춤과 음악이 만들어낸 감동 무대.' }
+  ],
+  '링크아트센터': [
+    { title: '뮤지컬 〈어쩌면 해피엔딩〉', genre: '뮤지컬', period: '2025.03.14 ~ 2025.07.06', price: 'VIP 14만원 / R석 10만원 / S석 7만원', keywords: ['창작뮤지컬','로봇','힐링'], description: '로봇 올리버와 클레어의 사랑 이야기. 브로드웨이도 주목한 한국 창작 뮤지컬의 자랑.' }
+  ],
+  '드림아트센터': [
+    { title: '뮤지컬 〈지킬앤하이드〉', genre: '뮤지컬', period: '2025.05.02 ~ 2025.08.24', price: 'VIP 17만원 / R석 13만원 / S석 9만원 / A석 5만원', keywords: ['스릴러','지킬박사','클래식뮤지컬'], description: '선과 악의 두 얼굴을 가진 지킬 박사의 이야기. 국내 최장기 앙코르 공연 뮤지컬.' }
+  ],
+  '샤롯데씨어터': [
+    { title: '뮤지컬 〈시카고〉', genre: '뮤지컬', period: '2025.04.18 ~ 2025.07.27', price: 'VIP 16만원 / R석 12만원 / S석 8만원 / A석 5만원', keywords: ['재즈','범죄','섹시'], description: '1920년대 시카고를 배경으로 한 재즈 뮤지컬의 바이블. 매혹적인 무대와 넘버가 가득.' }
+  ],
+  '홍익대학교대학로아트센터': [
+    { title: '뮤지컬 〈나와 나타샤와 흰 당나귀〉', genre: '뮤지컬', period: '2025.05.09 ~ 2025.07.06', price: 'R석 7만원 / S석 4만원', keywords: ['백석시인','서정','창작뮤지컬'], description: '시인 백석과 자야의 애틋한 사랑을 담은 창작 뮤지컬. 서정적인 시어와 아름다운 멜로디.' }
+  ],
+  '대학로예술극장': [
+    { title: '연극 〈벚꽃동산〉', genre: '연극', period: '2025.06.07 ~ 2025.07.13', price: '전석 3만원', keywords: ['체호프','러시아문학','고전'], description: '체호프의 마지막 희곡. 변화의 시대를 살아가는 사람들의 이야기를 서정적으로 그린다.' }
+  ],
+  '디큐브아트센터': [
+    { title: '뮤지컬 〈맘마미아!〉', genre: '뮤지컬', period: '2025.06.27 ~ 2025.09.21', price: 'VIP 14만원 / R석 11만원 / S석 7만원 / A석 4만원', keywords: ['ABBA','가족','유쾌'], description: 'ABBA의 명곡으로 가득한 유쾌한 가족 뮤지컬. 온 가족이 함께 즐길 수 있는 무대.' }
+  ],
+  '더굿씨어터': [
+    { title: '연극 〈아버지〉', genre: '연극', period: '2025.05.24 ~ 2025.07.06', price: 'R석 5만원 / S석 3만원', keywords: ['치매','가족','프랑스연극'], description: '치매를 앓는 아버지의 시선으로 그린 가족 이야기. 플로리앙 젤레르 원작의 감동 연극.' }
+  ]
+};
+
+// 이름 매칭 함수 — 부분 문자열로 DB 키를 찾는다
+function findTheaterData(placeName) {
+  // 완전 일치 우선
+  if (PERF_DB[placeName]) return PERF_DB[placeName];
+  // 부분 일치
+  var keys = Object.keys(PERF_DB);
+  for (var i = 0; i < keys.length; i++) {
+    if (placeName.indexOf(keys[i]) !== -1 || keys[i].indexOf(placeName) !== -1) {
+      return PERF_DB[keys[i]];
+    }
+  }
+  // 공백 제거 후 재시도 (예: '홍익대학교 대학로 아트센터' → '홍익대학교대학로아트센터')
+  var stripped = placeName.replace(/\s/g, '');
+  for (var j = 0; j < keys.length; j++) {
+    if (stripped.indexOf(keys[j].replace(/\s/g, '')) !== -1 || keys[j].replace(/\s/g, '').indexOf(stripped) !== -1) {
+      return PERF_DB[keys[j]];
+    }
+  }
+  return null;
+}
+
 function fetchPerformances(place) {
   var loading = document.getElementById('perf-loading');
   var perfList = document.getElementById('perf-list');
-  loading.style.display  = 'block';
-  perfList.innerHTML     = '';
+  loading.style.display = 'none';
+  perfList.innerHTML = '';
 
-  var today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-  var prompt = [
-    '당신은 한국 공연 정보 전문가입니다.',
-    '오늘 날짜: ' + today,
-    '극장명: ' + place.place_name,
-    '주소: ' + (place.road_address_name || place.address_name || ''),
-    '',
-    '위 극장에서 현재 진행 중이거나 곧 시작하는 공연 정보를 JSON으로 반환해 주세요.',
-    '형식:',
-    '[',
-    '  {',
-    '    "title": "공연 제목",',
-    '    "genre": "장르 (뮤지컬/연극/클래식/오페라/무용/복합 등)",',
-    '    "period": "공연 기간 (예: 2025.05.01 ~ 2025.07.31)",',
-    '    "price": "가격 (예: VIP 17만원 / R석 13만원 / S석 9만원)",',
-    '    "keywords": ["키워드1","키워드2","키워드3"],',
-    '    "description": "한두 줄 소개"',
-    '  }',
-    ']',
-    '',
-    '실제로 그 극장에서 공연 중인 작품을 우선 반환하세요.',
-    '확실하지 않으면 그 극장의 대표 레퍼토리 스타일에 맞는 공연 예시를 realistic하게 반환하세요.',
-    '공연이 없으면 빈 배열 [] 을 반환하세요.',
-    '오직 JSON 배열만 반환하고, 다른 텍스트나 마크다운 코드블록은 절대 포함하지 마세요.'
-  ].join('\n');
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    loading.style.display = 'none';
-    var raw = (data.content || []).map(function(b) { return b.type === 'text' ? b.text : ''; }).join('');
-    var clean = raw.replace(/```json|```/g, '').trim();
-    var perfs;
-    try { perfs = JSON.parse(clean); } catch(e) { perfs = []; }
+  var perfs = findTheaterData(place.place_name);
+  if (perfs) {
     renderPerformances(perfs);
-  })
-  .catch(function() {
-    loading.style.display = 'none';
-    document.getElementById('perf-list').innerHTML =
-      '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">공연 정보를 불러오지 못했어요 😅</div>';
-  });
+  } else {
+    // DB에 없는 극장 — 유사 장르 안내 메시지
+    perfList.innerHTML =
+      '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;line-height:1.8;">' +
+      '📋 <strong style="color:var(--text);">' + place.place_name + '</strong>의<br>' +
+      '공연 정보는 아직 준비 중이에요.<br>' +
+      '<span style="font-size:12px;">인터파크, YES24 티켓에서 최신 정보를 확인해보세요!</span>' +
+      '</div>';
+  }
 }
 
 function renderPerformances(perfs) {
