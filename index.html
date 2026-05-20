@@ -505,27 +505,53 @@ if (navigator.geolocation) {
 var searchBox   = document.getElementById('search-box');
 var suggestions = document.getElementById('suggestions');
 
+var suggestTimer = null;
+
 searchBox.addEventListener('input', function() {
   var kw = searchBox.value.trim();
   if (!kw) { suggestions.style.display = 'none'; return; }
-  ps.keywordSearch(kw + ' 극장', function(data, status) {
-    if (status !== kakao.maps.services.Status.OK) { suggestions.style.display = 'none'; return; }
-    suggestions.innerHTML = '';
-    data.slice(0, 5).forEach(function(p) {
-      var d = document.createElement('div');
-      d.textContent = p.place_name;
-      d.onclick = function() {
-        searchBox.value = p.place_name;
-        suggestions.style.display = 'none';
-        searchByKeyword(p.place_name);
-      };
-      suggestions.appendChild(d);
-    });
-    suggestions.style.display = 'block';
-  });
+
+  // 300ms 디바운스
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(function() {
+    // 1차: 입력 그대로 검색
+    ps.keywordSearch(kw, function(data, status) {
+      var results = (status === kakao.maps.services.Status.OK) ? data : [];
+
+      // 결과가 없으면 서울 중심으로 재검색
+      if (results.length === 0) {
+        ps.keywordSearch(kw, function(d2, s2) {
+          showSuggestions((s2 === kakao.maps.services.Status.OK) ? d2 : []);
+        }, { location: new kakao.maps.LatLng(37.5665, 126.9780), radius: 20000 });
+      } else {
+        showSuggestions(results);
+      }
+    }, currentPosition ? { location: currentPosition, radius: 20000 } : {});
+  }, 200);
 });
+
+function showSuggestions(data) {
+  suggestions.innerHTML = '';
+  if (!data || data.length === 0) { suggestions.style.display = 'none'; return; }
+  data.slice(0, 6).forEach(function(p) {
+    var d = document.createElement('div');
+    // 이름 + 카테고리 힌트
+    var cat = p.category_group_name || (p.category_name ? p.category_name.split('>').pop().trim() : '');
+    d.innerHTML = '<span style="font-weight:500">' + p.place_name + '</span>' +
+      (cat ? '<span style="color:var(--text-muted);font-size:11px;margin-left:6px;">' + cat + '</span>' : '');
+    d.onclick = function() {
+      searchBox.value = p.place_name;
+      suggestions.style.display = 'none';
+      searchByKeyword(p.place_name);
+    };
+    suggestions.appendChild(d);
+  });
+  suggestions.style.display = 'block';
+}
+
 searchBox.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { suggestions.style.display = 'none'; searchByKeyword(searchBox.value.trim()); }
+  if (e.key === 'Escape') { suggestions.style.display = 'none'; }
 });
 document.getElementById('search-btn').addEventListener('click', function() {
   suggestions.style.display = 'none';
@@ -537,12 +563,24 @@ document.addEventListener('click', function(e) {
 
 function searchByKeyword(kw) {
   if (!kw) return;
-  ps.keywordSearch(kw + ' 극장', function(data, status) {
-    if (status === kakao.maps.services.Status.OK) {
-      clearAllMarkers();
+  clearAllMarkers();
+  document.getElementById('results').innerHTML =
+    '<div class="empty-state"><div class="emoji">🔍</div>검색 중…</div>';
+
+  var opts = currentPosition
+    ? { location: currentPosition, radius: 20000 }
+    : { location: new kakao.maps.LatLng(37.5665, 126.9780), radius: 30000 };
+
+  ps.keywordSearch(kw, function(data, status) {
+    if (status === kakao.maps.services.Status.OK && data.length > 0) {
       displayTheaters(data);
+    } else {
+      // 위치 제한 없이 재시도
+      ps.keywordSearch(kw, function(d2, s2) {
+        displayTheaters(s2 === kakao.maps.services.Status.OK ? d2 : []);
+      });
     }
-  }, currentPosition ? { location: currentPosition } : {});
+  }, opts);
 }
 
 // ═══════════════════════════════════════════
@@ -589,50 +627,45 @@ function showNearbyInstruction(label) {
 // ═══════════════════════════════════════════
 var THEATER_KEYWORDS = [
   '세종문화회관', '충무아트센터', '예술의전당', '국립극장',
-  '링크아트센터', 'LG아트센터', '블루스퀘어', 'CJ ENM센터',
-  '홍익대학교 대학로 아트센터', '대학로예술극장', '명동예술극장',
-  'KBS아트홀', '국립정동극장', '두산아트센터', '아르코예술극장'
+  '링크아트센터', 'LG아트센터', '블루스퀘어',
+  '홍익대학교대학로아트센터', '대학로예술극장', '명동예술극장',
+  'KBS아트홀', '국립정동극장', '두산아트센터', '아르코예술극장',
+  '디큐브아트센터', '샤롯데씨어터', '드림아트센터', '더굿씨어터'
 ];
 
 function searchTheaters() {
   var list = document.getElementById('results');
-  list.innerHTML = '<div class="empty-state"><div class="emoji">🔍</div>극장 목록 불러오는 중…</div>';
+  list.innerHTML = '<div class="empty-state"><div class="emoji">🎭</div>극장 목록 불러오는 중…</div>';
   clearNearbyMarkers();
 
-  var center = currentPosition || new kakao.maps.LatLng(37.566826, 126.978656);
+  var center = currentPosition || new kakao.maps.LatLng(37.5665, 126.9780);
+  var allPlaces = [];
+  var idSet = new Set();
+  var done = 0;
+  var total = THEATER_KEYWORDS.length;
 
-  // 카카오맵 CT1 카테고리(문화시설) + 반경 검색
-  ps.categorySearch('CT1', function(data, status) {
-    var places = [];
-    if (status === kakao.maps.services.Status.OK) {
-      // 이름에 극장/아트/공연/홀/센터 포함된 곳만 필터
-      places = data.filter(function(p) {
-        return /극장|아트|홀|공연|뮤지컬|오페라|센터|씨어터|theater|theatre/i.test(p.place_name + (p.category_name || ''));
-      });
-    }
-    // 결과가 적으면 키워드 보충 검색
-    if (places.length < 5) {
-      var searched = 0;
-      var extra = [];
-      THEATER_KEYWORDS.slice(0, 6).forEach(function(kw) {
-        ps.keywordSearch(kw, function(d2, s2) {
-          searched++;
-          if (s2 === kakao.maps.services.Status.OK && d2.length > 0) {
-            var p = d2[0];
-            if (!places.find(function(x) { return x.id === p.id; }) && !extra.find(function(x) { return x.id === p.id; })) {
-              extra.push(p);
-            }
-          }
-          if (searched === 6) {
-            var combined = places.concat(extra);
-            displayTheaters(combined.length > 0 ? combined : places);
+  // 모든 키워드를 병렬로 검색 — 위치 제한 없이 서울 전역
+  THEATER_KEYWORDS.forEach(function(kw) {
+    ps.keywordSearch(kw, function(data, status) {
+      done++;
+      if (status === kakao.maps.services.Status.OK) {
+        data.slice(0, 2).forEach(function(p) {
+          if (!idSet.has(p.id)) {
+            idSet.add(p.id);
+            allPlaces.push(p);
           }
         });
-      });
-    } else {
-      displayTheaters(places);
-    }
-  }, { location: center, radius: 5000, sort: kakao.maps.services.SortBy.DISTANCE });
+      }
+      if (done === total) {
+        // 현재 위치 기준 거리순 정렬
+        allPlaces.sort(function(a, b) {
+          return parseFloat(haversine(center.getLat(), center.getLng(), a.y, a.x))
+               - parseFloat(haversine(center.getLat(), center.getLng(), b.y, b.x));
+        });
+        displayTheaters(allPlaces.length > 0 ? allPlaces : []);
+      }
+    }, { location: new kakao.maps.LatLng(37.5665, 126.9780), radius: 50000 });
+  });
 }
 
 function displayTheaters(places) {
