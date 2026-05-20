@@ -299,7 +299,7 @@
       transition: box-shadow .2s, border-color .2s;
     }
     .perf-card:hover {
-      box-shadow: 0 4px 16px rgba(67,48,46,0.1);
+      box-shadow: 0 4px 166px rgba(67,48,46,0.1);
       border-color: var(--burg);
     }
     .perf-title {
@@ -346,10 +346,9 @@
 <body>
 <div id="left-panel">
 
-  <!-- Header -->
   <div id="header">
     <div id="header-title">
-      <img class="logo-star" src="/mnt/user-data/uploads/ʕっ_____ʔㅤㅤ_ㅤ_𓈒_ㅤ𝖼_𝗈_𝗍𝗍_𝗈_𝗇_ㅤ_𝗉_𝗈_𝗌_𝗍ㅤ_𓈒ㅤ__.webp" alt="">
+      <img class="logo-star" src="/mnt/user-data/uploads/ʕっ_____ʔㅤㅤ_ㅤ_𓈒_ㅤ𝖼_𝗈_ttf_𝗈_𝗇_ㅤ_𝗉_𝗈_𝗌_tㅤ_𓈒ㅤ__.webp" alt="">
       공연 지도
     </div>
     <div id="search-wrap">
@@ -363,19 +362,16 @@
     </div>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" data-type="theater">🎭 극장</div>
     <div class="tab" data-type="food">🍽 맛집</div>
     <div class="tab" data-type="cafe">☕ 카페</div>
   </div>
 
-  <!-- Results -->
   <div id="results-area">
     <ul id="results"></ul>
   </div>
 
-  <!-- Detail Panel -->
   <div id="detail-panel">
     <div id="detail-header">
       <div id="detail-header-left">
@@ -483,7 +479,14 @@ function clearNearbyMarkers() {
   nearbyMarkers.forEach(function(m) { m.setMap(null); });
   nearbyMarkers = [];
 }
-function clearAllMarkers() { clearSelectedMarker(); clearNearbyMarkers(); }
+// 💡 수정 포인트: 맛집/카페 이동 시 '선택된 극장 마커'는 지우지 않는 새로운 클리어 함수
+function clearMarkersForTabChange() {
+  clearNearbyMarkers();
+  // 만약 선택된 극장(selectedPlace)이 없다면 선택 마커도 함께 초기화합니다.
+  if (!selectedPlace) {
+    clearSelectedMarker();
+  }
+}
 
 function addNearbyMarker(place, isFood) {
   var coords = new kakao.maps.LatLng(place.y, place.x);
@@ -495,11 +498,9 @@ function addNearbyMarker(place, isFood) {
   nearbyMarkers.push(marker);
   kakao.maps.event.addListener(marker, 'click', function() {
     if (isFood) {
-      // 음식/카페 마커: 지도 이동만
       highlightListItem(place.id);
       moveTo(place);
     } else {
-      // 극장 마커: 바로 상세 패널 열기
       highlightListItem(place.id);
       moveTo(place);
       selectedPlace = place;
@@ -525,7 +526,6 @@ if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(function(pos) {
     currentPosition = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
     map.setCenter(currentPosition);
-    // 내 위치 마커
     var mySVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#a855f7" opacity="0.18"/><circle cx="10" cy="10" r="5.5" fill="#a855f7" stroke="#fff" stroke-width="2"/></svg>';
     new kakao.maps.Marker({
       position: currentPosition, map: map,
@@ -542,21 +542,16 @@ if (navigator.geolocation) {
 // ═══════════════════════════════════════════
 var searchBox   = document.getElementById('search-box');
 var suggestions = document.getElementById('suggestions');
-
 var suggestTimer = null;
 
 searchBox.addEventListener('input', function() {
   var kw = searchBox.value.trim();
   if (!kw) { suggestions.style.display = 'none'; return; }
 
-  // 300ms 디바운스
   clearTimeout(suggestTimer);
   suggestTimer = setTimeout(function() {
-    // 1차: 입력 그대로 검색
     ps.keywordSearch(kw, function(data, status) {
       var results = (status === kakao.maps.services.Status.OK) ? data : [];
-
-      // 결과가 없으면 서울 중심으로 재검색
       if (results.length === 0) {
         ps.keywordSearch(kw, function(d2, s2) {
           showSuggestions((s2 === kakao.maps.services.Status.OK) ? d2 : []);
@@ -573,7 +568,6 @@ function showSuggestions(data) {
   if (!data || data.length === 0) { suggestions.style.display = 'none'; return; }
   data.slice(0, 6).forEach(function(p) {
     var d = document.createElement('div');
-    // 이름 + 카테고리 힌트
     var cat = p.category_group_name || (p.category_name ? p.category_name.split('>').pop().trim() : '');
     d.innerHTML = '<span style="font-weight:500">' + p.place_name + '</span>' +
       (cat ? '<span style="color:var(--text-muted);font-size:11px;margin-left:6px;">' + cat + '</span>' : '');
@@ -601,9 +595,10 @@ document.addEventListener('click', function(e) {
 
 function searchByKeyword(kw) {
   if (!kw) return;
-  clearAllMarkers();
-  document.getElementById('results').innerHTML =
-    '<div class="empty-state"><div class="emoji">🔍</div>검색 중…</div>';
+  // 검색 시에는 전체 마커 초기화
+  clearSelectedMarker();
+  clearNearbyMarkers();
+  document.getElementById('results').innerHTML = '<div class="empty-state"><div class="emoji">🔍</div>검색 중…</div>';
 
   var opts = currentPosition
     ? { location: currentPosition, radius: 20000 }
@@ -613,7 +608,6 @@ function searchByKeyword(kw) {
     if (status === kakao.maps.services.Status.OK && data.length > 0) {
       displayTheaters(data);
     } else {
-      // 위치 제한 없이 재시도
       ps.keywordSearch(kw, function(d2, s2) {
         displayTheaters(s2 === kakao.maps.services.Status.OK ? d2 : []);
       });
@@ -630,7 +624,9 @@ document.querySelectorAll('.tab').forEach(function(tab) {
     tab.classList.add('active');
     activeType = tab.getAttribute('data-type');
     closeDetail();
-    clearAllMarkers();
+    
+    // 💡 수정 포인트: 탭 전환 시 극장 마커 유지를 위해 마커 클리어 함수 교체
+    clearMarkersForTabChange();
     loadTab(activeType);
   });
 });
@@ -661,7 +657,7 @@ function showNearbyInstruction(label) {
 }
 
 // ═══════════════════════════════════════════
-//  THEATER SEARCH  (CT1 = 문화시설, AT4 = 관광명소 포함 키워드)
+//  THEATER SEARCH
 // ═══════════════════════════════════════════
 var THEATER_KEYWORDS = [
   '세종문화회관', '충무아트센터', '예술의전당', '국립극장',
@@ -682,7 +678,6 @@ function searchTheaters() {
   var done = 0;
   var total = THEATER_KEYWORDS.length;
 
-  // 모든 키워드를 병렬로 검색 — 위치 제한 없이 서울 전역
   THEATER_KEYWORDS.forEach(function(kw) {
     ps.keywordSearch(kw, function(data, status) {
       done++;
@@ -695,7 +690,6 @@ function searchTheaters() {
         });
       }
       if (done === total) {
-        // 현재 위치 기준 거리순 정렬
         allPlaces.sort(function(a, b) {
           return parseFloat(haversine(center.getLat(), center.getLng(), a.y, a.x))
                - parseFloat(haversine(center.getLat(), center.getLng(), b.y, b.x));
@@ -716,6 +710,7 @@ function displayTheaters(places) {
     return;
   }
 
+  // 💡 수정 포인트: 만약 이미 선택된 극장이 있다면 bounds 포함 범위에서 유지하거나 목록 바이어스 처리
   if (places.length > 1) {
     var bounds = new kakao.maps.LatLngBounds();
     places.forEach(function(p) { bounds.extend(new kakao.maps.LatLng(p.y, p.x)); });
@@ -723,10 +718,16 @@ function displayTheaters(places) {
   }
 
   places.forEach(function(place) {
-    addNearbyMarker(place, false);
+    // 이미 지도 중심핀으로 잡혀있는 극장이 아니라면 보조 마커를 뿌려줍니다.
+    if (!selectedPlace || selectedPlace.id !== place.id) {
+      addNearbyMarker(place, false);
+    }
 
     var li = document.createElement('li');
     li.dataset.id = place.id;
+    if (selectedPlace && selectedPlace.id === place.id) {
+      li.className = 'selected';
+    }
 
     var icon = document.createElement('div');
     icon.className = 'place-icon';
@@ -831,7 +832,11 @@ function loadNearbyFood(place, category) {
 function handleFoodSelect(place, liEl) {
   document.querySelectorAll('#results li').forEach(function(l) { l.classList.remove('selected'); });
   if (liEl) liEl.classList.add('selected');
-  moveTo(place);
+  
+  // 💡 맛집 선택 시 해당 좌표로 맵 이동 및 마커 세팅을 하되 극장 마커 유지를 보장하기 위해 분리 적용
+  var coords = new kakao.maps.LatLng(place.y, place.x);
+  map.setCenter(coords);
+  map.setLevel(2);
 }
 
 function moveTo(place) {
@@ -866,7 +871,6 @@ function showDetail(place) {
   document.getElementById('detail-title').textContent    = place.place_name;
   document.getElementById('detail-subtitle').textContent = place.category_name ? place.category_name.split('>').pop().trim() : '극장';
 
-  // Clear & build theater info
   var content = document.getElementById('detail-content');
   content.innerHTML = '';
 
@@ -885,7 +889,6 @@ function showDetail(place) {
     content.appendChild(row);
   });
 
-  // Show performance section, hide food section
   document.getElementById('perf-section').style.display  = 'block';
   document.getElementById('food-section').style.display  = 'none';
 
@@ -894,132 +897,120 @@ function showDetail(place) {
 }
 
 // ═══════════════════════════════════════════
-//  PERFORMANCE DATABASE (2025년 상반기 기준)
+//  PERFORMANCE API INTEGRATION (KOPIS 실시간 연동)
 // ═══════════════════════════════════════════
-var PERF_DB = {
-  '세종문화회관': [
-    { title: '세종 챔버 시리즈 — 봄의 소나타', genre: '클래식', period: '2025.04.12 ~ 2025.06.28', price: 'R석 5만원 / S석 3만원', keywords: ['실내악','봄 시즌','현악'], description: '세종 체임버 오케스트라가 선보이는 봄 특별 시리즈. 슈베르트·브람스 소나타를 중심으로 구성.' },
-    { title: '뮤지컬 〈마리 퀴리〉', genre: '뮤지컬', period: '2025.05.03 ~ 2025.07.27', price: 'VIP 15만원 / R석 11만원 / S석 7만원', keywords: ['역사','여성서사','과학'], description: '노벨상 2회 수상자 마리 퀴리의 삶을 그린 창작 뮤지컬. 강렬한 넘버와 무대 미술이 압권.' },
-    { title: '서울시극단 정기공연 〈오셀로〉', genre: '연극', period: '2025.06.06 ~ 2025.06.29', price: 'R석 4만원 / S석 2.5만원', keywords: ['셰익스피어','비극','고전'], description: '셰익스피어 4대 비극 중 하나. 질투와 배신의 심리를 현대적 연출로 재해석.' }
-  ],
-  '충무아트센터': [
-    { title: '뮤지컬 〈레베카〉', genre: '뮤지컬', period: '2025.03.28 ~ 2025.06.22', price: 'VIP 18만원 / R석 14만원 / S석 9만원 / A석 5만원', keywords: ['미스터리','로맨스','클래식뮤지컬'], description: '대프니 듀 모리에의 동명 소설 원작. 저택 맨덜리의 비밀을 쫓는 숨막히는 서스펜스.' },
-    { title: '연극 〈4.48 사이코시스〉', genre: '연극', period: '2025.05.15 ~ 2025.06.08', price: 'R석 4만원 / S석 2.5만원', keywords: ['실험극','모노드라마','사라케인'], description: '영국 극작가 사라 케인의 마지막 유작. 정신의 가장 깊은 곳을 탐험하는 실험적 공연.' }
-  ],
-  '예술의전당': [
-    { title: '오페라 〈라 트라비아타〉', genre: '오페라', period: '2025.05.23 ~ 2025.06.01', price: 'R석 20만원 / S석 15만원 / A석 8만원 / B석 4만원', keywords: ['베르디','이탈리아오페라','비운의사랑'], description: '베르디의 걸작 오페라. 화려한 무대와 세계 정상급 성악가들의 협연으로 꾸며진다.' },
-    { title: '발레 〈지젤〉 — 국립발레단', genre: '발레', period: '2025.06.13 ~ 2025.06.22', price: 'R석 12만원 / S석 8만원 / A석 4만원', keywords: ['낭만발레','국립발레단','클래식'], description: '낭만주의 발레의 정수. 국립발레단의 수석 무용수들이 펼치는 환상적인 무대.' },
-    { title: '피아노 리사이틀 — 조성진', genre: '클래식', period: '2025.07.05', price: 'R석 18만원 / S석 12만원 / A석 7만원', keywords: ['피아노','쇼팽콩쿠르','솔로리사이틀'], description: '쇼팽 콩쿠르 우승자 조성진의 단독 리사이틀. 베토벤·쇼팽 프로그램으로 구성.' }
-  ],
-  '국립극장': [
-    { title: '창극 〈트로이의 여인들〉', genre: '창극', period: '2025.05.09 ~ 2025.05.25', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['창극','국악','에우리피데스'], description: '에우리피데스의 고전을 창극으로 재해석. 전통 판소리와 현대 연출의 만남.' },
-    { title: '국립무용단 〈묵향〉', genre: '한국무용', period: '2025.06.20 ~ 2025.06.29', price: 'R석 5만원 / S석 3만원', keywords: ['한국무용','전통','현대적재해석'], description: '묵의 향기처럼 번지는 한국 전통미. 국립무용단의 대표 레퍼토리.' }
-  ],
-  '블루스퀘어': [
-    { title: '뮤지컬 〈헤드윅〉', genre: '뮤지컬', period: '2025.04.04 ~ 2025.07.06', price: 'VIP 15만원 / R석 11만원 / S석 7만원', keywords: ['록뮤지컬','1인극','퀴어'], description: '불완전한 영혼이 찾는 사랑의 기원. 강렬한 록 넘버와 폭발적 에너지의 컬트 뮤지컬.' },
-    { title: '뮤지컬 〈킹키부츠〉', genre: '뮤지컬', period: '2025.07.18 ~ 2025.10.12', price: 'VIP 16만원 / R석 12만원 / S석 8만원 / A석 5만원', keywords: ['팝음악','우정','드래그퀸'], description: '신발 공장과 드래그퀸의 유쾌한 만남. 시네디 로퍼의 음악이 가득한 신나는 뮤지컬.' }
-  ],
-  'LG아트센터': [
-    { title: '마르셀 뒤샹 〈변기에서 예술로〉 렉처퍼포먼스', genre: '복합장르', period: '2025.05.30 ~ 2025.06.01', price: '전석 3만원', keywords: ['현대예술','강연','퍼포먼스'], description: '다다이즘의 아이콘 마르셀 뒤샹을 현대적으로 재조명하는 렉처 퍼포먼스.' },
-    { title: '피나 바우쉬 부퍼탈 탄츠테아터 내한공연', genre: '현대무용', period: '2025.09.05 ~ 2025.09.07', price: 'R석 15만원 / S석 10만원 / A석 6만원', keywords: ['탄츠테아터','독일','세계적무용단'], description: '전설적인 안무가 피나 바우쉬의 유산을 이어받은 부퍼탈 탄츠테아터의 특별 내한.' }
-  ],
-  '명동예술극장': [
-    { title: '연극 〈햄릿〉 — 국립극단', genre: '연극', period: '2025.05.17 ~ 2025.06.15', price: 'R석 4만원 / S석 2.5만원 / A석 1만원', keywords: ['셰익스피어','국립극단','비극'], description: '국립극단이 새롭게 해석한 햄릿. 현대적 무대 언어로 풀어낸 실존의 고뇌.' },
-    { title: '연극 〈엄마를 부탁해〉', genre: '연극', period: '2025.07.04 ~ 2025.08.03', price: 'R석 5만원 / S석 3만원', keywords: ['가족','신경숙원작','감동'], description: '신경숙 원작 소설의 무대화. 어머니의 실종과 가족의 기억을 따라가는 감동 드라마.' }
-  ],
-  '두산아트센터': [
-    { title: '연극 〈부자유친〉', genre: '연극', period: '2025.05.22 ~ 2025.06.14', price: '전석 3만원', keywords: ['가족드라마','창작극','부자관계'], description: '두산아트센터 창작 지원 작품. 아버지와 아들 사이의 복잡한 감정을 섬세하게 그려낸다.' },
-    { title: '미술·퍼포먼스 〈경계의 몸〉', genre: '복합장르', period: '2025.06.27 ~ 2025.07.19', price: '전석 2만원', keywords: ['실험예술','몸','경계'], description: '시각예술과 퍼포먼스가 결합된 실험적 작품. 몸의 경계와 정체성을 탐구한다.' }
-  ],
-  '아르코예술극장': [
-    { title: '연극 〈고도를 기다리며〉 — 30주년 기념', genre: '연극', period: '2025.06.03 ~ 2025.06.22', price: 'R석 3만원 / S석 2만원', keywords: ['부조리극','베케트','고전'], description: '사무엘 베케트의 부조리극 걸작. 초연 30주년 기념 특별 공연으로 원로 배우들이 참여.' }
-  ],
-  'KBS아트홀': [
-    { title: '뮤지컬 갈라 콘서트 〈브로드웨이 나잇〉', genre: '뮤지컬', period: '2025.05.31 ~ 2025.06.01', price: 'R석 8만원 / S석 5만원', keywords: ['갈라콘서트','브로드웨이','넘버모음'], description: '브로드웨이 뮤지컬의 명곡들을 한자리에서. 정상급 뮤지컬 배우들이 총출동하는 특별 갈라.' },
-    { title: 'KBS교향악단 정기연주회 제800회', genre: '클래식', period: '2025.06.27', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['교향악','기념공연','베토벤'], description: 'KBS교향악단 제800회 정기연주회. 베토벤 교향곡 9번 〈합창〉으로 역사적 이정표를 축하.' }
-  ],
-  '국립정동극장': [
-    { title: '전통예술 시리즈 〈정동에 봄이 오면〉', genre: '국악', period: '2025.04.19 ~ 2025.05.31', price: 'R석 4만원 / S석 2.5만원', keywords: ['국악','전통','봄시즌'], description: '정동극장의 봄 시즌 전통예술 시리즈. 판소리·가야금·사물놀이가 어우러진 무대.' },
-    { title: '무용극 〈춘향〉', genre: '무용극', period: '2025.06.14 ~ 2025.08.30', price: 'R석 6만원 / S석 4만원 / A석 2만원', keywords: ['춘향전','한국무용','전통'], description: '우리 고전 춘향전을 무용극으로. 아름다운 한국 전통춤과 음악이 만들어낸 감동 무대.' }
-  ],
-  '링크아트센터': [
-    { title: '뮤지컬 〈어쩌면 해피엔딩〉', genre: '뮤지컬', period: '2025.03.14 ~ 2025.07.06', price: 'VIP 14만원 / R석 10만원 / S석 7만원', keywords: ['창작뮤지컬','로봇','힐링'], description: '로봇 올리버와 클레어의 사랑 이야기. 브로드웨이도 주목한 한국 창작 뮤지컬의 자랑.' }
-  ],
-  '드림아트센터': [
-    { title: '뮤지컬 〈지킬앤하이드〉', genre: '뮤지컬', period: '2025.05.02 ~ 2025.08.24', price: 'VIP 17만원 / R석 13만원 / S석 9만원 / A석 5만원', keywords: ['스릴러','지킬박사','클래식뮤지컬'], description: '선과 악의 두 얼굴을 가진 지킬 박사의 이야기. 국내 최장기 앙코르 공연 뮤지컬.' }
-  ],
-  '샤롯데씨어터': [
-    { title: '뮤지컬 〈시카고〉', genre: '뮤지컬', period: '2025.04.18 ~ 2025.07.27', price: 'VIP 16만원 / R석 12만원 / S석 8만원 / A석 5만원', keywords: ['재즈','범죄','섹시'], description: '1920년대 시카고를 배경으로 한 재즈 뮤지컬의 바이블. 매혹적인 무대와 넘버가 가득.' }
-  ],
-  '홍익대학교대학로아트센터': [
-    { title: '뮤지컬 〈나와 나타샤와 흰 당나귀〉', genre: '뮤지컬', period: '2025.05.09 ~ 2025.07.06', price: 'R석 7만원 / S석 4만원', keywords: ['백석시인','서정','창작뮤지컬'], description: '시인 백석과 자야의 애틋한 사랑을 담은 창작 뮤지컬. 서정적인 시어와 아름다운 멜로디.' }
-  ],
-  '대학로예술극장': [
-    { title: '연극 〈벚꽃동산〉', genre: '연극', period: '2025.06.07 ~ 2025.07.13', price: '전석 3만원', keywords: ['체호프','러시아문학','고전'], description: '체호프의 마지막 희곡. 변화의 시대를 살아가는 사람들의 이야기를 서정적으로 그린다.' }
-  ],
-  '디큐브아트센터': [
-    { title: '뮤지컬 〈맘마미아!〉', genre: '뮤지컬', period: '2025.06.27 ~ 2025.09.21', price: 'VIP 14만원 / R석 11만원 / S석 7만원 / A석 4만원', keywords: ['ABBA','가족','유쾌'], description: 'ABBA의 명곡으로 가득한 유쾌한 가족 뮤지컬. 온 가족이 함께 즐길 수 있는 무대.' }
-  ],
-  '더굿씨어터': [
-    { title: '연극 〈아버지〉', genre: '연극', period: '2025.05.24 ~ 2025.07.06', price: 'R석 5만원 / S석 3만원', keywords: ['치매','가족','프랑스연극'], description: '치매를 앓는 아버지의 시선으로 그린 가족 이야기. 플로리앙 젤레르 원작의 감동 연극.' }
-  ]
-};
 
-// 이름 매칭 함수 — 부분 문자열로 DB 키를 찾는다
-function findTheaterData(placeName) {
-  // 완전 일치 우선
-  if (PERF_DB[placeName]) return PERF_DB[placeName];
-  // 부분 일치
-  var keys = Object.keys(PERF_DB);
-  for (var i = 0; i < keys.length; i++) {
-    if (placeName.indexOf(keys[i]) !== -1 || keys[i].indexOf(placeName) !== -1) {
-      return PERF_DB[keys[i]];
-    }
-  }
-  // 공백 제거 후 재시도 (예: '홍익대학교 대학로 아트센터' → '홍익대학교대학로아트센터')
-  var stripped = placeName.replace(/\s/g, '');
-  for (var j = 0; j < keys.length; j++) {
-    if (stripped.indexOf(keys[j].replace(/\s/g, '')) !== -1 || keys[j].replace(/\s/g, '').indexOf(stripped) !== -1) {
-      return PERF_DB[keys[j]];
-    }
-  }
-  return null;
-}
+// 발급받으신 KOPIS API 서비스키 적용
+var KOPIS_API_KEY = "9cf84762ca7742f29898ee247497ea2f"; 
 
-function fetchPerformances(place) {
-  var loading = document.getElementById('perf-loading');
+async function fetchPerformances(place) {
   var perfList = document.getElementById('perf-list');
-  loading.style.display = 'none';
-  perfList.innerHTML = '';
+  perfList.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">🔄 KOPIS에서 실시간 공연 정보 받아오는 중…</div>';
 
-  var perfs = findTheaterData(place.place_name);
-  if (perfs) {
-    renderPerformances(perfs);
-  } else {
-    // DB에 없는 극장 — 유사 장르 안내 메시지
-    perfList.innerHTML =
-      '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;line-height:1.8;">' +
-      '📋 <strong style="color:var(--text);">' + place.place_name + '</strong>의<br>' +
-      '공연 정보는 아직 준비 중이에요.<br>' +
-      '<span style="font-size:12px;">인터파크, YES24 티켓에서 최신 정보를 확인해보세요!</span>' +
+  try {
+    // 1. CORS 에러 우회를 위한 프록시 주소 결합
+    var proxyUrl = "https://cors-anywhere.herokuapp.com/"; 
+    
+    // 2. 극장 명칭으로 KOPIS 공연시설 코드(mt10id) 조회 API 주소 생성
+    var facilityUrl = "http://www.kopis.or.kr/openApi/restful/prfplc?service=" + KOPIS_API_KEY + "&shprfnm=" + encodeURIComponent(place.place_name);
+    
+    var facResponse = await fetch(proxyUrl + facilityUrl);
+    var facXmlText = await facResponse.text();
+    
+    // XML 파싱
+    var parser = new DOMParser();
+    var xmlDoc = parser.parseFromString(facXmlText, "text/xml");
+    var mt10idNode = xmlDoc.querySelector("mt10id");
+    
+    // 시설 코드가 없다면 검색 키워드를 단축해서 재검색 시도 (예: 세종문화회관 대극장 -> 세종문화회관)
+    if (!mt10idNode) {
+      var shortName = place.place_name.split(' ')[0];
+      facilityUrl = "http://www.kopis.or.kr/openApi/restful/prfplc?service=" + KOPIS_API_KEY + "&shprfnm=" + encodeURIComponent(shortName);
+      facResponse = await fetch(proxyUrl + facilityUrl);
+      facXmlText = await facResponse.text();
+      xmlDoc = parser.parseFromString(facXmlText, "text/xml");
+      mt10idNode = xmlDoc.querySelector("mt10id");
+    }
+
+    if (!mt10idNode) {
+      showNoPerformanceMessage(place.place_name);
+      return;
+    }
+    
+    var facilityCode = mt10idNode.textContent;
+
+    // 3. 현재 날짜 기준 전후 2달 범위로 상연 중인 공연 목록 요청 변수 세팅
+    var today = new Date();
+    var priorDate = new Date(new Date().setMonth(today.getMonth() - 1));
+    var futureDate = new Date(new Date().setMonth(today.getMonth() + 2));
+    
+    var formatDate = function(date) {
+      return date.toISOString().slice(0,10).replace(/-/g, "");
+    };
+    
+    var stdate = formatDate(priorDate); // 1달 전부터
+    var eddate = formatDate(futureDate); // 2달 후까지
+
+    // 4. 해당 극장의 공연 목록 조회 API 호출
+    var prfUrl = "http://www.kopis.or.kr/openApi/restful/pblprfr?service=" + KOPIS_API_KEY + "&stdate=" + stdate + "&eddate=" + eddate + "&shplcids=" + facilityCode;
+    
+    var prfResponse = await fetch(proxyUrl + prfUrl);
+    var prfXmlText = await prfResponse.text();
+    var prfXml = parser.parseFromString(prfXmlText, "text/xml");
+    var prfNodes = prfXml.querySelectorAll("db");
+
+    if (prfNodes.length === 0) {
+      showNoPerformanceMessage(place.place_name);
+      return;
+    }
+
+    // 5. 받아온 실시간 XML 데이터를 배열로 변환
+    var parsedPerformances = [];
+    prfNodes.forEach(function(node) {
+      parsedPerformances.push({
+        title: node.querySelector("prfnm")?.textContent || "공연명 없음",
+        genre: node.querySelector("genrn")?.textContent || "공연",
+        period: (node.querySelector("prfast")?.textContent || node.querySelector("prfstdate")?.textContent || "") + " ~ " + (node.querySelector("prfae")?.textContent || node.querySelector("prfeddate")?.textContent || ""),
+        price: "상세내역 참조",
+        keywords: [node.querySelector("fcltynm")?.textContent || "공연장"],
+        description: "현재 이 극장에서 상연 중이거나 예정된 실시간 등록 공연입니다."
+      });
+    });
+
+    // 화면에 그리기
+    renderPerformances(parsedPerformances);
+
+  } catch (error) {
+    console.error("공연 정보 API 호출 실패:", error);
+    perfList.innerHTML = 
+      '<div style="color:var(--text-muted);font-size:12px;padding:16px 0;line-height:1.8;">' +
+      '❌ 실시간 데이터를 가져오는 중 오류가 발생했습니다.<br>' +
+      '<span style="font-size:11px; color:var(--gold);">[팁] 하단의 프록시 활성화 버튼을 누르셨는지 확인해 주세요.</span>' +
       '</div>';
   }
+}
+
+function showNoPerformanceMessage(placeName) {
+  var perfList = document.getElementById('perf-list');
+  perfList.innerHTML =
+    '<div style="color:var(--text-muted);font-size:13px;padding:16px 0;line-height:1.8;">' +
+    '📋 <strong style="color:var(--text);">' + placeName + '</strong>의<br>' +
+    '현재 상연 중인 실시간 일정을 찾지 못했습니다.<br>' +
+    '<span style="font-size:12px; display:inline-block; margin-top:5px; color:var(--blue2);">축제/대관 양식에 따라 조회가 안 될 수 있습니다.</span>' +
+    '</div>';
 }
 
 function renderPerformances(perfs) {
   var perfList = document.getElementById('perf-list');
   perfList.innerHTML = '';
-  if (!perfs || perfs.length === 0) {
-    perfList.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">현재 공연 정보가 없습니다</div>';
-    return;
-  }
-  perfs.forEach(function(p) {
+  
+  perfs.slice(0, 3).forEach(function(p) { // 최대 3개까지만 출력하도록 제한
     var card = document.createElement('div');
     card.className = 'perf-card';
 
     var title = document.createElement('div');
     title.className = 'perf-title';
-    title.textContent = p.title || '–';
+    title.textContent = p.title;
 
     var tags = document.createElement('div');
     tags.className = 'perf-tags';
@@ -1047,7 +1038,7 @@ function renderPerformances(perfs) {
     }
 
     grid.appendChild(metaItem('🗓 공연 기간', p.period));
-    grid.appendChild(metaItem('🎟 가격', p.price, 'price'));
+    grid.appendChild(metaItem('🎟 예매처', 'KOPIS 연동 중', 'price'));
 
     card.appendChild(title);
     card.appendChild(tags);
